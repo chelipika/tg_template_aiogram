@@ -1,0 +1,3 @@
+TOKEN = ""
+CHANNEL_ID = ""
+CHANNEL_LINK = ""
