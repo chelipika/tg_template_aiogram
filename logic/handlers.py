@@ -64,7 +64,7 @@ async def start(message: Message):
     await rq.set_user(tg_id=user_id)
 
     if not await sub_chek(message.from_user.id):
-        await message.answer(f"Subscribe first, Подпишитесь: \n{CHANNEL_LINK}", reply_markup=kb.subscribe_channel)
+        await message.answer(f"Send request first, Киньте запрос на подписку: \n{CHANNEL_LINK}", reply_markup=kb.subscribe_channel)
         return
     await message.answer("your text is here")
 
