@@ -1,4 +1,6 @@
 import os
+import asyncio
+import schedule
 from aiogram import F, Bot
 from aiogram.filters import CommandStart, Command, CommandObject
 from aiogram.types import Message, LabeledPrice, PreCheckoutQuery, CallbackQuery, FSInputFile, ChatJoinRequest
@@ -10,6 +12,7 @@ from collections import defaultdict
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
 import database.requests as rq
+from aiogram.types import ChatMemberUpdated
 bot = Bot(token=TOKEN)
 import logic.keyboards as kb
 # File to store chat history
@@ -52,17 +55,27 @@ async def handle_join_request(update: ChatJoinRequest):
     pending_requests.add(update.from_user.id)
     # Optionally notify admins or log the request
 
+@router.my_chat_member()
+async def handle_new_chat(update: ChatMemberUpdated):
+    chat_id = update.chat.id
+    await rq.set_group(chat_id)
+    # Save chat_id to your database or list
 
-@router.message(Command("test"))
-async def test(message: Message):
-    await message.answer("test")
-    await message.answer(str(pending_requests))
+@router.channel_post()
+async def forward_channel_post(message: Message):
+    """Forwards messages from the channel to a all users in bot, the channel you created to accept the requests 
+    will be the target channel(posts from this channel will be listened and forwarded to all users)."""
+    for user in await rq.get_all_user_ids():
+        try:
+            await bot.forward_message(from_chat_id=CHANNEL_ID,chat_id=user, message_id=message.message_id)
+        except Exception as e:
+            await message.answer(f"Unexpected error: {e}")
+        
 
 @router.message(CommandStart())
 async def start(message: Message):
     user_id = message.from_user.id
     await rq.set_user(tg_id=user_id)
-
     if not await sub_chek(message.from_user.id):
         await message.answer(f"Send request first, Киньте запрос на подписку: \n{CHANNEL_LINK}", reply_markup=kb.subscribe_channel)
         return
