@@ -25,6 +25,12 @@ class AdvMsg(StatesGroup):
     inline_link_name = State()
     inline_link_link = State()
     
+class GroupMsg(StatesGroup):
+    img = State()
+    audio = State()
+    txt = State()
+    inline_link_name = State()
+    inline_link_link = State()
     
 
 class Gen(StatesGroup):
@@ -135,6 +141,55 @@ async def ads_final(message: Message, state: FSMContext):
 
     else:
         for user in await rq.get_all_user_ids():
+            if data['img']:
+                await bot.send_photo(chat_id=user, photo=data['img'],caption=data['txt'], reply_markup=new_inline_kb)
+            elif data['audio']:
+                await bot.send_voice(chat_id=user, voice=data['audio'], caption=data["txt"], reply_markup=new_inline_kb)
+
+
+    await state.clear()
+
+
+
+@router.message(Command("send_to_all_groups"))
+async def start_send_to_all_GroupMsg(message: Message, state: FSMContext):
+    await state.set_state(GroupMsg.img)
+    await message.answer("send your img🖼️")
+
+
+@router.message(GroupMsg.img)
+async def ads_img_GroupMsg(message: Message, state: FSMContext):
+    photo_data = { "photo": message.photo }  # Ensure it's in dictionary format
+    await state.update_data(img=message.photo[-1].file_id)
+    await state.set_state(GroupMsg.txt)
+    await message.answer("send your text🗄️")
+
+@router.message(GroupMsg.txt)
+async def ads_txtGroupMsg(message: Message, state: FSMContext):
+    await state.update_data(txt=message.text)
+    await state.set_state(GroupMsg.inline_link_name)
+    await message.answer("send your inline_link name📛")
+
+@router.message(GroupMsg.inline_link_name)
+async def ads_lk_nameGroupMsg(message: Message, state: FSMContext):
+    await state.update_data(inline_link_name=message.text)
+    await state.set_state(GroupMsg.inline_link_link)
+    await message.answer("send your inline_link LINK🔗")
+
+@router.message(GroupMsg.inline_link_link)
+async def ads_finalGroupMsg(message: Message, state: FSMContext):
+    await state.update_data(inline_link_link=message.text)
+    data = await state.get_data()
+    new_inline_kb = kb.create_markap_kb(name=data['inline_link_name'], url=data['inline_link_link'])
+    if new_inline_kb == None:
+        for user in await rq.get_all_groups_ids():
+            if data['img']:
+                await bot.send_photo(chat_id=user, photo=data['img'],caption=data['txt'])
+            elif data['audio']:
+                await bot.send_voice(chat_id=user, voice=data['audio'], caption=data["txt"])
+
+    else:
+        for user in await rq.get_all_groups_ids():
             if data['img']:
                 await bot.send_photo(chat_id=user, photo=data['img'],caption=data['txt'], reply_markup=new_inline_kb)
             elif data['audio']:
